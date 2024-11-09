@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -12,20 +13,16 @@ export default function Signup() {
   const handleSignup = (e) => {
     e.preventDefault();
 
-    // Basic password confirmation check
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
-    // Clear error message
     setError("");
 
-    // Retrieve existing data from local storage or initialize empty arrays
     const adminData = JSON.parse(localStorage.getItem("adminData")) || [];
     const userDataArray = JSON.parse(localStorage.getItem("userData")) || [];
 
-    // Check if username already exists
     const existingUser = [...adminData, ...userDataArray].find(
       (user) => user.username === username
     );
@@ -35,22 +32,18 @@ export default function Signup() {
       return;
     }
 
-    // Retrieve the current highest ID from localStorage or set it to 0 if it doesn't exist
     const currentId = parseInt(localStorage.getItem("currentUserId")) || 0;
-    const newUserId = currentId + 1; // Increment the ID for the new user
+    const newUserId = currentId + 1;
 
-    // Prepare user data with the generated ID
     const userData = {
-      id: newUserId, // Use the incremented ID
+      id: newUserId,
       username,
       password,
       isAdmin,
     };
 
-    // Log data to the console
     console.log("User Data:", userData);
 
-    // Store data in the appropriate array
     if (isAdmin) {
       adminData.push(userData);
       localStorage.setItem("adminData", JSON.stringify(adminData));
@@ -61,10 +54,12 @@ export default function Signup() {
       alert("User registered successfully");
     }
 
-    // Update the highest user ID in localStorage
+    // Save both arrays in cookies
+    Cookies.set("adminData", JSON.stringify(adminData), { expires: 7 });
+    Cookies.set("userDataArray", JSON.stringify(userDataArray), { expires: 7 });
+
     localStorage.setItem("currentUserId", newUserId);
 
-    // Redirect to dataset page after successful signup
     navigate("/sadmin/dataset");
   };
 
@@ -83,7 +78,7 @@ export default function Signup() {
           className="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
         >
           Data Set
-        </button>{" "}
+        </button>
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="flex flex-col">
             <label

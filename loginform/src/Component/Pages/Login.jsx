@@ -2,57 +2,59 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import Cookies from "js-cookie";
 import { loginSuccess } from "../Redux/AuthSlice";
 
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const retrieveData = (key) => {
+    try {
+      return JSON.parse(Cookies.get(key) || localStorage.getItem(key) || "[]");
+    } catch (error) {
+      console.error(`Error retrieving ${key}:`, error);
+      return [];
+    }
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    // Fetch data from local storage
-    const adminData = JSON.parse(localStorage.getItem("adminData")) || [];
-    const userData = JSON.parse(localStorage.getItem("userData")) || [];
+    // Retrieve data
+    const adminData = retrieveData("adminData");
+    const userData = retrieveData("userData");
 
-    console.log("Admin Data:", adminData); // Debugging
-    console.log("User Data:", userData);   // Debugging
-
-    // Check for matching user
+    // Find matching user
     const user = adminData.concat(userData).find(
       (u) => u.username === username && u.password === password
     );
 
-    console.log("Found User:", user); // Debugging
-
     if (user) {
-      // Update login status
-      user.isLoggedIn = true;
-      if (user.isAdmin) {
-        const updatedAdminData = adminData.map((u) =>
-          u.username === user.username ? { ...u, isLoggedIn: true } : u
-        );
-        localStorage.setItem("adminData", JSON.stringify(updatedAdminData));
-      } else {
-        const updatedUserData = userData.map((u) =>
-          u.username === user.username ? { ...u, isLoggedIn: true } : u
-        );
-        localStorage.setItem("userData", JSON.stringify(updatedUserData));
-      }
+      // Update login status for the user
+      const updatedData = user.isAdmin
+        ? adminData.map((u) => (u.username === user.username ? { ...u, isLoggedIn: true } : u))
+        : userData.map((u) => (u.username === user.username ? { ...u, isLoggedIn: true } : u));
 
-      dispatch(loginSuccess(user)); // Update Redux state
+      const dataKey = user.isAdmin ? "adminData" : "userData";
+      Cookies.set(dataKey, JSON.stringify(updatedData), { expires: 7 });
+      localStorage.setItem(dataKey, JSON.stringify(updatedData));
 
-      localStorage.setItem(
-        "userInfo",
-        JSON.stringify({ username: user.username, isAdmin: user.isAdmin, isLoggedIn: true })
-      );
+      // Store session info
+      const userInfo = { username: user.username, isAdmin: user.isAdmin, isLoggedIn: true };
+      Cookies.set("userLogin", JSON.stringify(userInfo), { expires: 7 });
+      localStorage.setItem("userLogin", JSON.stringify(userInfo));
 
+      dispatch(loginSuccess(user));
       navigate(user.isAdmin ? "/admin/dashboard" : "/user/dashboard");
     } else {
       alert("Invalid username or password");
     }
+    setLoading(false);
   };
 
   return (
@@ -90,9 +92,12 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full px-4 py-2 mt-4 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={loading}
+            className={`w-full px-4 py-2 mt-4 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              loading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Login
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

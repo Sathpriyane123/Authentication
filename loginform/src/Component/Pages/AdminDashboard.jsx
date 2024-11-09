@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import Logout from '../Common/Logout';
 
 const AdminDashboard = () => {
@@ -7,9 +8,12 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUserInfo = JSON.parse(localStorage.getItem("userInfo"));
+    // Fetch userInfo from cookies or localStorage
+    const storedUserInfo = JSON.parse(Cookies.get("userLogin") || localStorage.getItem("userLogin") || "null");
+
     if (!storedUserInfo) {
-      navigate("/login");
+      // Redirect to login if no user info found
+      navigate("/");
     } else {
       setUserInfo(storedUserInfo);
     }
@@ -23,7 +27,7 @@ const AdminDashboard = () => {
           Welcome, {userInfo.username}! You are logged in as <strong>Admin</strong>.
         </p>
       )}
-      <Logout/>
+      <Logout />
     </div>
   );
 };

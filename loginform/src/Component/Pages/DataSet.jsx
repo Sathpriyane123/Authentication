@@ -1,24 +1,37 @@
 // src/components/DataSet.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 export default function DataSet() {
   const [adminData, setAdminData] = useState([]);
   const [userData, setUserData] = useState([]);
 
-  // Function to load data from localStorage
+  // Function to load data from both localStorage and cookies
   const loadData = () => {
-    const storedAdminData = JSON.parse(localStorage.getItem('adminData')) || [];
-    const storedUserData = JSON.parse(localStorage.getItem('userData')) || [];
-    setAdminData(storedAdminData);
-    setUserData(storedUserData);
+    try {
+      const storedAdminData = JSON.parse(localStorage.getItem('adminData') || Cookies.get('adminData') || '[]');
+      const storedUserData = JSON.parse(localStorage.getItem('userData') || Cookies.get('userData') || '[]');
+      
+      setAdminData(storedAdminData);
+      setUserData(storedUserData);
+
+      // Sync cookies if only localStorage has the data
+      if (!Cookies.get('adminData')) Cookies.set('adminData', JSON.stringify(storedAdminData), { expires: 7 });
+      if (!Cookies.get('userData')) Cookies.set('userData', JSON.stringify(storedUserData), { expires: 7 });
+      
+    } catch (error) {
+      console.error("Error parsing storage data:", error);
+      setAdminData([]);
+      setUserData([]);
+    }
   };
 
   useEffect(() => {
-    // Initial load of data from localStorage
+    // Initial load of data from storage
     loadData();
 
-    // Add event listener for changes in localStorage
+    // Add event listener for changes in localStorage to sync data across tabs
     const handleStorageChange = () => loadData();
     window.addEventListener('storage', handleStorageChange);
 
@@ -26,10 +39,12 @@ export default function DataSet() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const updateLocalStorage = (admin, user) => {
+  const updateStorage = (admin, user) => {
     localStorage.setItem('adminData', JSON.stringify(admin));
     localStorage.setItem('userData', JSON.stringify(user));
-    loadData(); // Refresh data immediately after updating localStorage
+    Cookies.set('adminData', JSON.stringify(admin), { expires: 7 });
+    Cookies.set('userData', JSON.stringify(user), { expires: 7 });
+    loadData(); // Refresh data immediately after updating storage
   };
 
   // Remove user/admin entry
@@ -38,12 +53,12 @@ export default function DataSet() {
       const updatedAdmin = [...adminData];
       updatedAdmin.splice(index, 1);
       setAdminData(updatedAdmin);
-      updateLocalStorage(updatedAdmin, userData);
+      updateStorage(updatedAdmin, userData);
     } else {
       const updatedUser = [...userData];
       updatedUser.splice(index, 1);
       setUserData(updatedUser);
-      updateLocalStorage(adminData, updatedUser);
+      updateStorage(adminData, updatedUser);
     }
   };
 
@@ -55,7 +70,7 @@ export default function DataSet() {
     const updatedUser = [...userData, { ...adminUser, isAdmin: false }];
     setAdminData(updatedAdmin);
     setUserData(updatedUser);
-    updateLocalStorage(updatedAdmin, updatedUser);
+    updateStorage(updatedAdmin, updatedUser);
   };
 
   // Change user to admin
@@ -66,7 +81,7 @@ export default function DataSet() {
     const updatedAdmin = [...adminData, { ...regularUser, isAdmin: true }];
     setUserData(updatedUser);
     setAdminData(updatedAdmin);
-    updateLocalStorage(updatedAdmin, updatedUser);
+    updateStorage(updatedAdmin, updatedUser);
   };
 
   return (
